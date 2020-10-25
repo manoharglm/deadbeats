@@ -10,33 +10,61 @@ import UIKit
 import SwiftUI
 //import PlaygroundSupport
 
+struct Response: Codable {
+    var results: [Result]
+}
+
+struct Result: Codable {
+    var trackId: Int
+    var trackName: String
+    var collectionName: String
+    var artworkUrl100: URL
+}
+
+
+
 struct ContentView: View {
-    @State var isShowingText: Bool = true
-      
-      var body: some View {
-          Group {
-              Spacer()
-              Toggle(isOn: $isShowingText) {
-                  Text("Show Text")
-              }
-              Spacer()
-              
-              (self.isShowingText)
-                ? Text("I love to toggle").bold().foregroundColor(Color.red)
-                  : nil
-              (self.isShowingText)
-                  ? Text("Yes blinking is so great")
-                  : nil
-              (self.isShowingText)
-                  ? Text("Why did they ever take this out of Swift")
-                  : nil
-              (self.isShowingText)
-                  ? Text("Look at me look at me look at me")
-                  : nil
-              Spacer()
-          }
-          
-      }
+    @State private var results = [Result]()
+    
+    var body: some View {
+        List(results, id: \.trackId) { item in
+            HStack(alignment: .bottom){
+//                Text(item.trackName)
+                VStack(alignment: .leading) {
+                    Text(item.trackName)
+                    Text(item.collectionName)
+                }
+            }
+
+        }
+        .onAppear(perform: loadData)
+    }
+    
+    func loadData() {
+        guard let url = URL(string: "https://itunes.apple.com/search?term=pink+floyd&entity=song") else {
+            print("Invalid URL")
+            return
+        }
+        let request = URLRequest(url: url)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let data = data {
+                if let decodedResponse = try? JSONDecoder().decode(Response.self, from: data) {
+                    // we have good data – go back to the main thread
+                    DispatchQueue.main.async {
+                        // update our UI
+                        self.results = decodedResponse.results
+                    }
+                    
+                    // everything is good, so we can exit
+                    return
+                }
+            }
+            
+            // if we're still here it means there was a problem
+            print("Fetch failed: \(error?.localizedDescription ?? "Unknown error")")    }.resume()
+    }
+    
 }
 
 struct ContentView_Previews: PreviewProvider {
